@@ -1,6 +1,6 @@
 {
   "name": "claude-afk",
-  "description": "Step away from the keyboard and keep the same Claude Code conversation going in Telegram: finished turns land on your phone, your replies come back as the next turn, permission requests are answered with yes/no, and a live ticker shows what is running.",
+  "description": "Keep talking to Claude Code from Telegram when you step away: you write plain text, Claude answers, and it all lands in the session you were already in — same context, same tools. Tool permissions are approved with yes/no along the way, and a live message shows what is running.",
   "version": "0.1.0",
   "author": {
     "name": "claude-afk contributors"
@@ -11,10 +11,13 @@
   "keywords": [
     "claude-code",
     "telegram",
+    "telegram-bot",
     "remote",
     "mobile",
+    "chat",
     "hooks",
     "afk",
-    "bridge"
+    "bridge",
+    "ai-agent"
   ]
 }

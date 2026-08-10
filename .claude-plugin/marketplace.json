@@ -10,7 +10,7 @@
     {
       "name": "claude-afk",
       "source": "./",
-      "description": "Continue a live Claude Code session from Telegram when you step away: turn relay, permission approvals, and a live progress ticker. Pure standard-library Python, no daemon, no tmux, no Node.",
+      "description": "Keep talking to Claude Code from Telegram when you step away: you write plain text, Claude answers, and it all lands in the session you were already in — same context, same tools. Tool permissions are approved with yes/no along the way, and a live message shows what is running.",
       "version": "0.1.0",
       "license": "MIT",
       "homepage": "https://github.com/Pupok462/claude-afk",
@@ -21,7 +21,8 @@
         "mobile",
         "hooks",
         "afk",
-        "bridge"
+        "bridge",
+        "chat"
       ]
     }
   ]

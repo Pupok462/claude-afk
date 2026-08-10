@@ -13,11 +13,16 @@
 
 </div>
 
-**claude-afk is a Claude Code plugin that lets you leave your desk without ending
-the conversation.** Type `/afk` and the session you are already in continues in
-Telegram: each finished turn is delivered to your phone, your reply comes back as
-the next turn in that same session, tool permissions are approved with `yes` or
-`no`, and one live message shows which tool is running right now.
+**claude-afk is a Claude Code plugin that moves your live Claude Code
+conversation into Telegram when you step away from the keyboard.** Type `/afk`
+and keep talking from your phone — **you write whatever you want, in plain
+language, and Claude answers**, exactly as it would at your desk. It is a chat,
+not a command interface.
+
+Your message enters the session you were already in, so the full history, your
+project instructions, your skills and your tools are all still there. Two extras
+ride along the same channel: `yes`/`no` answers a tool-permission request when
+one comes up, and a single live message shows which tool is running right now.
 
 It is written in pure Python standard library. No daemon, no `tmux`, no Node.js,
 no packages to install, and nothing to paste into `settings.json`.
@@ -26,10 +31,14 @@ no packages to install, and nothing to paste into `settings.json`.
 
 ## What claude-afk does
 
-- **Relays each finished turn to Telegram** and returns your reply into the same
-  live session — same context window, same project instructions, same model.
+- **Carries the whole conversation, both ways.** Anything you type in Telegram —
+  a question, a new task, a correction, a "no, do it the other way" — becomes
+  your next turn, and Claude's full answer comes back to the chat.
+- **Keeps you in the same session**, not a fresh one: same context window, same
+  project instructions, same model.
 - **Approves or refuses tool calls from your phone**, so the session does not
-  freeze at the first permission prompt while nobody is at the keyboard.
+  freeze at the first permission prompt while nobody is at the keyboard. This is
+  a convenience on top of the conversation, not the point of it.
 - **Shows live progress** as one message edited in place: step count, elapsed
   time, and the tool currently running.
 - **Switches itself off** on a turn budget, a wall-clock cap, or an unanswered
@@ -65,8 +74,8 @@ about.
 
 | What you send in Telegram | What happens |
 |---|---|
-| plain text | becomes the next turn in the session |
-| `yes` / `no` | answers a pending permission request |
+| **any plain text** — a question, a task, a correction | **becomes your next turn; Claude answers in the chat.** This is the normal mode |
+| `yes` / `no` | answers a permission request, when one is pending |
 | `/status` | project, turn number, time left |
 | `/back` | switches AFK off |
 
@@ -231,6 +240,14 @@ tmux and want inline buttons, keystroke control, or the ability to wake a sessio
 that has already stopped.
 
 ## FAQ
+
+**Can I chat freely in Telegram, or only approve tool calls with yes/no?**
+Freely. Plain text is the primary mode: write a question, a new task, a
+correction — anything you would type at the keyboard — and it becomes your next
+turn in the session, with Claude's full answer sent back to the chat. `yes` and
+`no` are only special when a tool-permission request is pending; the rest of the
+time they are just words. A bridge limited to approvals would be a remote
+control, not a conversation.
 
 **Does it work with the Claude Code desktop app?**
 Yes — that is the case it was built for. Tools that rely on tmux keystroke
