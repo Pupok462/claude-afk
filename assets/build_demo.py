@@ -64,8 +64,49 @@ def text(x, y, content, cls="t", anchor="start"):
     )
 
 
+def smil(start, end):
+    """SMIL opacity track for one scene.
+
+    GitHub's markdown pipeline drops @keyframes from an SVG's <style> but keeps
+    SMIL, so the timeline is expressed with <animate> rather than CSS. Scenes
+    that survive to the end of the loop also carry opacity="1" as their static
+    attribute, so a renderer that ignores animation altogether still shows the
+    finished conversation instead of an empty frame.
+    """
+    norm = lambda t: max(0.0, min(1.0, t / LOOP))
+    points = [(0.0, 0)]
+    if start > 0:
+        points.append((norm(start), 0))
+    points.append((norm(start + FADE), 1))
+    if end >= LOOP:
+        points.append((1.0, 1))
+    else:
+        points.extend([(norm(end - FADE), 1), (norm(end), 0), (1.0, 0)])
+
+    # keyTimes must be non-decreasing and span exactly 0..1.
+    times, values, last = [], [], -1.0
+    for t, v in points:
+        t = max(t, last + 1e-4) if t <= last else t
+        last = t
+        times.append(min(t, 1.0))
+        values.append(v)
+    times[-1] = 1.0
+    return (
+        '<animate attributeName="opacity" dur="%ss" repeatCount="indefinite" '
+        'calcMode="linear" keyTimes="%s" values="%s"/>'
+    ) % (
+        LOOP,
+        ";".join("%.4f" % t for t in times),
+        ";".join(str(v) for v in values),
+    )
+
+
 def group(gid, start, end, body):
-    return '<g class="s" id="%s">%s</g>' % (gid, "".join(body)), (gid, start, end)
+    base = 1 if end >= LOOP else 0
+    node = '<g id="%s" opacity="%d">%s%s</g>' % (
+        gid, base, smil(start, end), "".join(body)
+    )
+    return node, (gid, start, end)
 
 
 # --------------------------------------------------------------------------
@@ -125,27 +166,8 @@ scene("done", 9.7, LOOP, [
 ])
 
 
-def keyframes(gid, start, end):
-    """opacity 0 → 1 for [start, end], as a percentage keyframe block."""
-    stops = []
-    pct = lambda t: max(0.0, min(100.0, t / LOOP * 100.0))
-    if start > 0:
-        stops.append((0.0, 0))
-        stops.append((pct(start), 0))
-    stops.append((pct(start + FADE), 1))
-    if end >= LOOP:
-        stops.append((100.0, 1))
-    else:
-        stops.append((pct(end - FADE), 1))
-        stops.append((pct(end), 0))
-        stops.append((100.0, 0))
-    body = " ".join("%.3f%%{opacity:%d}" % (p, o) for p, o in stops)
-    return "@keyframes k-%s{%s}#%s{animation-name:k-%s}" % (gid, body, gid, gid)
-
-
 def build():
     nodes = "".join(node for node, _ in SCENES)
-    frames = "".join(keyframes(gid, a, b) for _, (gid, a, b) in SCENES)
 
     css = """
     .bg{fill:#ffffff}
@@ -173,11 +195,7 @@ def build():
       .title{fill:#e9edf0}
       .sub{fill:#8fa3b5}
     }
-    .s{opacity:0;animation-duration:%(loop)ss;animation-iteration-count:infinite;
-       animation-timing-function:linear}
-    @media (prefers-reduced-motion:reduce){.s{animation:none;opacity:1}}
-    %(frames)s
-    """ % {"sans": SANS, "mono": MONO, "loop": LOOP, "frames": frames}
+    """ % {"sans": SANS, "mono": MONO}
 
     svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}" role="img" aria-label="A Telegram chat: a request is sent, a single status message updates in place while tools run, it disappears, and the finished answer arrives — then a permission request is approved with yes.">
 <style>{css}</style>
