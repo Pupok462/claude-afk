@@ -164,9 +164,11 @@ scene("yes", 8.9, LOOP, [
     bubble(756, SLOT_YES, 96, 46, "user"),
     text(836, SLOT_YES + 29, "yes", "t u", "end"),
 ])
+# The closing line stays conversational on purpose: readers who only glance at
+# the last frame were coming away thinking this is an approve-only remote.
 scene("done", 9.7, LOOP, [
-    bubble(28, SLOT_DONE, 300, 52, "bot"),
-    text(52, SLOT_DONE + 32, "✅ Pushed. 1 commit to main.", "t"),
+    bubble(28, SLOT_DONE, 486, 52, "bot"),
+    text(52, SLOT_DONE + 32, "✅ Pushed. Anything else while you're out?", "t"),
 ])
 
 
