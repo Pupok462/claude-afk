@@ -28,6 +28,9 @@ jobs:
       - name: Run the bridge test suite
         run: python3 tests/test_bridge.py
 
+      - name: Check the demo animation timeline
+        run: python3 tests/test_demo_timeline.py
+
   lint:
     name: syntax and manifests
     runs-on: ubuntu-latest
@@ -64,6 +67,12 @@ jobs:
                   failed = True
           sys.exit(1 if failed else 0)
           PY
+
+      - name: demo.svg is in sync with its generator
+        run: |
+          python3 assets/build_demo.py
+          git diff --exit-code -- assets/demo.svg \
+            || { echo "assets/demo.svg is stale — re-run python3 assets/build_demo.py"; exit 1; }
 
       - name: No secrets committed
         run: |

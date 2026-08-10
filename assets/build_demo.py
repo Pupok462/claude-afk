@@ -67,11 +67,15 @@ def text(x, y, content, cls="t", anchor="start"):
 def smil(start, end):
     """SMIL opacity track for one scene.
 
-    GitHub's markdown pipeline drops @keyframes from an SVG's <style> but keeps
-    SMIL, so the timeline is expressed with <animate> rather than CSS. Scenes
-    that survive to the end of the loop also carry opacity="1" as their static
-    attribute, so a renderer that ignores animation altogether still shows the
-    finished conversation instead of an empty frame.
+    The timeline is SMIL rather than CSS keyframes for one reason: graceful
+    degradation. Scenes that live to the end of the loop carry opacity="1" as a
+    static attribute, which any renderer that ignores animation — a social
+    preview, a feed reader, an image converter — uses as-is, so the fallback is
+    the finished conversation rather than a blank rectangle. A CSS version needs
+    opacity:0 defaults to work at all, and degrades to an empty frame.
+
+    (GitHub itself serves the SVG unmodified and runs either kind of animation;
+    an earlier note here claimed it strips @keyframes, which was wrong.)
     """
     norm = lambda t: max(0.0, min(1.0, t / LOOP))
     points = [(0.0, 0)]
