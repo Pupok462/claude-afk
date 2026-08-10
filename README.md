@@ -1,17 +1,44 @@
+<div align="center">
+
 # claude-afk
 
-**Walk away from your desk without ending the conversation.** Type `/afk` and
-your live Claude Code session keeps going in Telegram: finished turns arrive on
-your phone, your replies come back as the next turn, tool approvals are a
-`yes`/`no`, and a live ticker shows what is running right now.
+<img src="assets/demo.svg" alt="A Telegram chat: a request is sent, one status message updates in place while tools run, it disappears, and the finished answer arrives — then a permission request is approved with a yes." width="880">
 
-No daemon. No tmux. No Node. No dependencies — pure Python standard library.
+[![CI](https://github.com/Pupok462/claude-afk/actions/workflows/ci.yml/badge.svg)](https://github.com/Pupok462/claude-afk/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
+[![Dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen.svg)](#why-zero-dependencies-matters)
 
-[Русская версия](README.ru.md)
+[English](README.md) · [Русский](README.ru.md)
+
+</div>
+
+**claude-afk is a Claude Code plugin that lets you leave your desk without ending
+the conversation.** Type `/afk` and the session you are already in continues in
+Telegram: each finished turn is delivered to your phone, your reply comes back as
+the next turn in that same session, tool permissions are approved with `yes` or
+`no`, and one live message shows which tool is running right now.
+
+It is written in pure Python standard library. No daemon, no `tmux`, no Node.js,
+no packages to install, and nothing to paste into `settings.json`.
 
 ---
 
-## What it looks like
+## What claude-afk does
+
+- **Relays each finished turn to Telegram** and returns your reply into the same
+  live session — same context window, same project instructions, same model.
+- **Approves or refuses tool calls from your phone**, so the session does not
+  freeze at the first permission prompt while nobody is at the keyboard.
+- **Shows live progress** as one message edited in place: step count, elapsed
+  time, and the tool currently running.
+- **Switches itself off** on a turn budget, a wall-clock cap, or an unanswered
+  message — it never runs unattended forever.
+
+## How do you use Claude Code from your phone?
+
+Type `/afk` in Claude Code and walk away. From that moment the conversation
+happens in Telegram:
 
 ```
 you:  fix the failing tests
@@ -31,25 +58,19 @@ you:  fix the failing tests
 you:  yes
 ```
 
-One message is edited in place while work happens, so the chat never fills with
-noise. The answer is sent as a *new* message on purpose — editing an old one
-would not raise a notification, and the finished turn is exactly what you want
-to be notified about.
+One message is edited while work happens, so the chat never fills with noise.
+The answer is sent as a *new* message on purpose: editing an old message raises
+no notification, and a finished turn is exactly what you want to be notified
+about.
 
-## Why this exists
+| What you send in Telegram | What happens |
+|---|---|
+| plain text | becomes the next turn in the session |
+| `yes` / `no` | answers a pending permission request |
+| `/status` | project, turn number, time left |
+| `/back` | switches AFK off |
 
-Plenty of projects put Claude Code in Telegram. Almost all of them own the
-agent process: they spawn it, or drive a `tmux` pane with keystroke injection.
-That is a great fit for a terminal workflow on a VPS.
-
-`claude-afk` takes the other approach — it hooks into **the interactive session
-you are already sitting in front of**. You hand the conversation over mid-task
-and take it back at the keyboard, with full context on both sides. It works in
-the Claude Code desktop app, where there is no tmux pane to type into, and it
-adds nothing to your machine except four Python files that exit in milliseconds
-when AFK is off.
-
-Honest comparison with the alternatives is [further down](#alternatives).
+Back at the keyboard, `/afk off` ends it too.
 
 ## Install
 
@@ -61,45 +82,36 @@ Honest comparison with the alternatives is [further down](#alternatives).
 /plugin install claude-afk@claude-afk-marketplace
 ```
 
-The plugin ships its own hooks, so there is nothing to paste into
-`settings.json`.
+The plugin ships its own hooks, so installation registers everything for you.
+Verified inventory after install: **1 skill, 4 hooks, ~164 tokens** of always-on
+context.
 
-### Connect a bot (once, ~2 minutes)
+### Connect a Telegram bot (once, about two minutes)
 
-1. In Telegram, open [@BotFather](https://t.me/BotFather) → `/newbot` → pick a
+1. In Telegram open [@BotFather](https://t.me/BotFather) → `/newbot` → choose a
    name and a username ending in `bot`.
-2. Open your new bot, press **Start**, and send it any message. A bot cannot
-   message you first — Telegram forbids it.
-3. In **your own terminal** (not through Claude — the token must not land in an
-   AI transcript):
+2. Open your new bot, press **Start**, send it any message. A bot cannot message
+   you first — Telegram forbids it.
+3. In **your own terminal** — not through Claude, so the token never enters an AI
+   transcript:
 
    ```bash
    python3 ~/.claude/plugins/*/claude-afk/*/skills/afk/scripts/afk_setup.py
    ```
 
-   The token input is hidden. The script validates it, finds your chat id,
-   sends a test message, and writes `~/.claude/afk/config.json` with mode
-   `0600`.
+The token input is hidden. The script validates it, finds your chat id, sends a
+test message, and writes `~/.claude/afk/config.json` with mode `0600`.
 
-Running from a clone instead? Use `skills/afk/scripts/afk_setup.py`.
+## How does claude-afk work?
 
-## Use
+A Claude Code `Stop` hook may refuse to let a turn end. When it returns
 
-In Claude Code, type `/afk` — or just say "I need to step away". Then leave.
+```json
+{"decision": "block", "reason": "<your Telegram message>"}
+```
 
-| In Telegram | Effect |
-|---|---|
-| plain text | becomes the next turn in the session |
-| `yes` / `no` | answers a permission request |
-| `/status` | project, turn number, time left |
-| `/back` | switch AFK off |
-
-Back at the keyboard: `/afk off`.
-
-Options when switching on: `--hours 8` (session cap), `--max-turns 40`
-(exchange budget), `--wait-minutes 45` (how long one turn waits for a reply).
-
-## How it works
+the runtime feeds that text back in as the next user turn. That single contract
+is the whole bridge.
 
 ```
         turn finished
@@ -114,102 +126,165 @@ Claude ──────────────► Stop hook ──► sendMes
             the runtime feeds that in as the next user turn
 ```
 
-Four hooks, all switched by one state file (`~/.claude/afk/active.json`):
+Four hooks, all switched by a single state file (`~/.claude/afk/active.json`):
 
 | Hook | Job | Timeout |
 |---|---|---|
 | `Stop` | delete the ticker, send the finished turn, wait for a reply, return it to the session | 3600 s |
 | `PostToolUse` | edit the live ticker after each tool call | 20 s |
 | `PermissionRequest` | ask `yes`/`no` for a tool call | 1200 s |
-| `Notification` | say that the session needs attention (`idle_prompt`, `agent_needs_input`) | 30 s |
+| `Notification` | report that the session needs attention | 30 s |
 
-The state binds to the first session that runs a hook, so a second Claude Code
-window is never hijacked. Full details in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Full detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-## Limits — stated plainly
+## Does it start a new session or continue the existing one?
+
+It continues the existing one. There is no second agent, no headless `claude -p`
+respawn, and no separate system prompt. Your Telegram message enters the session
+you were already in, with the full conversation history, your `CLAUDE.md`, your
+skills and your tools intact.
+
+The only addition is a short wrapper telling Claude the reply came from a phone
+and to keep the answer compact. It lives in
+[`hook_stop.py`](skills/afk/scripts/hook_stop.py) and the string is in
+[`i18n/en.json`](skills/afk/i18n/en.json), so you can read or change it.
+
+This matters when comparing tools: a bridge that shells out to `claude -p` per
+message starts from a blank context every time.
+
+## Can you approve Claude Code tool permissions from Telegram?
+
+Yes. When a tool call needs a decision, the `PermissionRequest` hook sends the
+tool name and its arguments to your chat and waits for `yes` or `no`.
+
+Without this, remote work collapses at the first prompt: the session simply
+freezes on screen until someone comes back. Approvals are **relayed, never
+automatic** — every one is an explicit human answer, and if nobody replies in
+time the request falls back to the on-screen prompt rather than deciding for you.
+
+## Is it safe to approve tool calls from a phone?
+
+Understand the trade-off before switching it on: **whoever controls your Telegram
+account controls that Claude Code session.** Use a device lock and Telegram
+two-step verification.
+
+What the bridge does to limit damage:
+
+| Control | Behaviour |
+|---|---|
+| Chat allowlist | only the configured `chat_id` is read; anything else is logged and dropped |
+| Stale-message guard | the update queue is drained at start and anything older than the start time is discarded, so a backlog cannot be replayed as instructions |
+| Turn budget | `--max-turns`, default 40 |
+| Wall-clock cap | `--hours`, default 8 |
+| Reply timeout | `--wait-minutes`, default 45 |
+| Fail-open hooks | any exception is logged and the hook exits `0` — a broken bridge cannot wedge a session |
+| No auto-approval | a permission timeout falls back to the screen instead of allowing or denying |
+
+Your existing `PreToolUse` hooks still run, so approving from Telegram does not
+bypass whatever already guards your commits, pushes or destructive commands.
+More in [docs/SECURITY.md](docs/SECURITY.md).
+
+## What are the limits?
+
+Stated plainly, because they decide whether this fits your workflow:
 
 - **Answer granularity is a turn.** The ticker moves in real time; the answer
-  itself arrives when the turn is finished. Reasoning is not streamed.
-- **The session must stay alive.** This lives inside a running Claude Code
+  arrives when the turn is finished. Reasoning is not streamed.
+- **The session must stay alive.** The bridge lives inside a running Claude Code
   session — close it and the bridge goes with it.
-- **A reply after the timeout is not picked up.** If nobody answers within
-  `--wait-minutes` (45 by default), the turn ends and AFK switches off. Your
-  message stays in the chat but will not enter the session.
+- **A reply after the timeout is not picked up.** Past `--wait-minutes` the turn
+  ends and AFK switches off; your message stays in the chat but does not enter
+  the session.
 - **Not for background or scheduled runs.** There is nobody to hold a
   conversation with.
 
-## Safety
+## Why zero dependencies matters
 
-- Only the configured `chat_id` is accepted; anything else is logged and
-  dropped.
-- Messages sent *before* AFK was switched on are never injected: the update
-  queue is drained at start and anything older than the start time is discarded.
-- Budgets: turn count, per-reply wait, and a hard wall-clock session cap.
-- Any error inside a hook is logged and the hook exits `0` — a broken bridge
-  can never wedge your session.
-- Tool approvals are relayed, never auto-granted. Each one is an explicit human
-  `yes`.
+These scripts run as Claude Code hooks, on whatever Python the machine happens to
+have, in an environment you do not control. Every dependency is one more way for
+a hook to fail at the exact moment you are away from your desk. So: standard
+library only, Python 3.9+, and hooks that exit `0` on any error instead of
+wedging your session.
 
-**Understand the trade-off:** approving tool calls from a phone means whoever
-controls your Telegram account controls your Claude Code session. Use a device
-lock and Telegram two-step verification. More in [docs/SECURITY.md](docs/SECURITY.md).
+The cost when AFK is off is a process spawn that reads one missing file and
+exits.
 
-## Configuration
+## claude-afk vs other Claude Code Telegram bridges
 
-`~/.claude/afk/config.json` (mode `0600`, created by setup):
+Several projects put Claude Code in Telegram. Most **own the agent process** —
+they spawn it, or drive a `tmux` pane with keystroke injection. claude-afk
+instead **hooks the interactive session you are already sitting in front of**.
 
-| Key | Meaning |
-|---|---|
-| `bot_token` | from @BotFather |
-| `chat_id` | the only chat allowed to drive the session |
-| `lang` | interface language — `en`, `ru`, or any file in `skills/afk/i18n/` |
+| Project | Approach | Needs | Permission approvals | Wakes a stopped session |
+|---|---|---|---|---|
+| **claude-afk** | Claude Code hooks | Python 3.9+ only | yes, `yes`/`no` text | no |
+| [jsayubi/ccgram](https://github.com/jsayubi/ccgram) | hooks + tmux/Ghostty/PTY | Node 18+ | yes, inline buttons incl. *Always* | yes |
+| [alexei-led/ccgram](https://github.com/alexei-led/ccgram) | tmux/herdr bridge | Python 3.14+, tmux | not documented | yes |
+| [oscarsterling/claude-telegram-remote](https://github.com/oscarsterling/claude-telegram-remote) | daemon + tmux + MCP | tmux, 2 bots, MCP plugin | no | yes |
+| [Open-ACP/OpenACP](https://github.com/Open-ACP/OpenACP) | Agent Client Protocol | ACP agent | not documented | yes |
+| [RichardAtCT/claude-code-telegram](https://github.com/RichardAtCT/claude-code-telegram) | full remote bot | Python, bot host | n/a | yes |
 
-Environment overrides: `AFK_LANG`, `AFK_HOME` (state directory),
-`AFK_TG_API_BASE` (used by the test stub).
+**Choose claude-afk** if you use the Claude Code desktop app (where there is no
+tmux pane to type into), want nothing installed beyond Python, and want to hand
+over the session you are already in. **Choose one of the others** if you live in
+tmux and want inline buttons, keystroke control, or the ability to wake a session
+that has already stopped.
 
-Adding a language is a JSON file in `skills/afk/i18n/` — missing keys fall back
-to English per key, so a partial translation is fine.
+## FAQ
+
+**Does it work with the Claude Code desktop app?**
+Yes — that is the case it was built for. Tools that rely on tmux keystroke
+injection do not.
+
+**Does it work on Linux and macOS?**
+Yes. CI runs the suite on Ubuntu with Python 3.9, 3.11 and 3.13, plus macOS.
+Windows is untested.
+
+**Can I run it on more than one project at once?**
+No, deliberately. The state binds to the first session whose hook runs, so a
+second Claude Code window is never hijacked.
+
+**Does it cost anything?**
+No. It is MIT-licensed and talks directly to the free Telegram Bot API. Your
+Claude Code usage is billed as usual.
+
+**What language is the interface in?**
+English by default, Russian included. It follows `AFK_LANG` or the `lang` key in
+your config. Adding a language is one JSON file in
+[`skills/afk/i18n/`](skills/afk/i18n/); missing keys fall back to English
+individually, so a partial translation works.
+
+**Where is my bot token stored?**
+`~/.claude/afk/config.json`, mode `0600`, written by a script that reads it with
+`getpass`. It never appears on screen, in shell history, in `ps`, or in an AI
+transcript. `.gitignore` and a CI check both refuse to let it be committed.
+
+**How do I remove it?**
+Uninstall the plugin and `rm -rf ~/.claude/afk`. Revoke the bot token in
+@BotFather if you are done with it.
 
 ## Tests
 
-38 end-to-end checks against a local stub of the Telegram API. No network, no
-Telegram account, no dependencies:
+38 end-to-end checks against a local stub of the Telegram Bot API — no network,
+no Telegram account, no dependencies:
 
 ```bash
 python3 tests/test_bridge.py
 ```
 
-They run the real hook scripts as subprocesses, exactly as Claude Code does,
-and cover delivery, reply injection, session binding, `/back`, timeouts,
+They run the real hook scripts as subprocesses, exactly as Claude Code does, and
+cover delivery, reply injection, session binding, `/back`, timeouts,
 foreign-chat rejection, stale backlogs, message chunking, permission
 allow/deny, the turn budget, corrupt state, the ticker lifecycle, and locale
 fallback.
 
-## Alternatives
+## Documentation
 
-Worth knowing before you pick this one:
-
-- [jsayubi/ccgram](https://github.com/jsayubi/ccgram) — the closest sibling.
-  Also hook-based, plus inline buttons (Allow/Deny/**Always**/Defer), keystroke
-  injection into tmux/Ghostty/PTY, and a supervised background service. Node 18+.
-- [alexei-led/ccgram](https://github.com/alexei-led/ccgram) — tmux/herdr bridge
-  covering Claude Code, Codex and Gemini, parallel sessions as Telegram topics,
-  voice input. Python 3.14+ and tmux required.
-- [oscarsterling/claude-telegram-remote](https://github.com/oscarsterling/claude-telegram-remote) —
-  23 commands, checkpoint rollback; needs tmux, two bots and an MCP plugin.
-- [Open-ACP/OpenACP](https://github.com/Open-ACP/OpenACP) — Agent Client
-  Protocol bridge to Telegram, Discord and Slack.
-- [RichardAtCT/claude-code-telegram](https://github.com/RichardAtCT/claude-code-telegram) —
-  the long-standing full remote-access bot.
-
-Pick `claude-afk` if you want the desktop app supported, zero dependencies, and
-a handoff of the session you are already in. Pick one of the others if you live
-in tmux and want buttons and keystroke control.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md). Translations and hook-edge-case tests
-are especially welcome.
+- [Architecture](docs/ARCHITECTURE.md) — the hook contract, state, design decisions
+- [Security](docs/SECURITY.md) — threat model, token handling, what is sent
+- [Troubleshooting](docs/TROUBLESHOOTING.md) — symptom-first fixes
+- [Contributing](CONTRIBUTING.md) — ground rules, tests, adding a language
+- [Changelog](CHANGELOG.md)
 
 ## License
 
