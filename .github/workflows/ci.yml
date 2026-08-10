@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: tests (python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.9", "3.11", "3.13"]
+        include:
+          - os: macos-latest
+            python-version: "3.11"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run the bridge test suite
+        run: python3 tests/test_bridge.py
+
+  lint:
+    name: syntax and manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Byte-compile every script
+        run: python3 -m compileall -q skills/afk/scripts tests
+
+      - name: Validate JSON manifests and locales
+        run: |
+          for f in .claude-plugin/plugin.json .claude-plugin/marketplace.json \
+                   hooks/hooks.json skills/afk/i18n/*.json; do
+            python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$f"
+            echo "ok $f"
+          done
+
+      - name: Locale keys must match the English base
+        run: |
+          python3 - <<'PY'
+          import glob, json, sys
+          base = set(json.load(open("skills/afk/i18n/en.json")))
+          failed = False
+          for path in glob.glob("skills/afk/i18n/*.json"):
+              if path.endswith("en.json"):
+                  continue
+              extra = set(json.load(open(path))) - base
+              if extra:
+                  print("%s has keys missing from en.json: %s" % (path, sorted(extra)))
+                  failed = True
+          sys.exit(1 if failed else 0)
+          PY
+
+      - name: No secrets committed
+        run: |
+          if git grep -nE '[0-9]{8,10}:[A-Za-z0-9_-]{30,}' -- . ; then
+            echo "A string shaped like a Telegram bot token is committed."
+            exit 1
+          fi
+          echo "clean"

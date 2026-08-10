@@ -1,0 +1,47 @@
+# ---------------------------------------------------------------------------
+# claude-afk .gitignore
+#
+# This project talks to the Telegram Bot API, so the first job of this file is
+# to make it impossible to commit a bot token or a chat id. Runtime state lives
+# in ~/.claude/afk/ (outside the repo) by design — the patterns below are the
+# belt to that suspenders.
+# ---------------------------------------------------------------------------
+
+# --- Secrets and runtime state — never commit ---
+config.json
+afk_config.json
+active.json
+*.log
+.env
+.env.*
+!.env.example
+secrets/
+afk-home/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# --- Editors / OS ---
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# --- Local scratch ---
+/tmp/
+/scratch/
+/CLAUDE.md

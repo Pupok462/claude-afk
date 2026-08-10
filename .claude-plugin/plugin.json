@@ -1,0 +1,20 @@
+{
+  "name": "claude-afk",
+  "description": "Step away from the keyboard and keep the same Claude Code conversation going in Telegram: finished turns land on your phone, your replies come back as the next turn, permission requests are answered with yes/no, and a live ticker shows what is running.",
+  "version": "0.1.0",
+  "author": {
+    "name": "claude-afk contributors"
+  },
+  "homepage": "https://github.com/Pupok462/claude-afk",
+  "repository": "https://github.com/Pupok462/claude-afk",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "telegram",
+    "remote",
+    "mobile",
+    "hooks",
+    "afk",
+    "bridge"
+  ]
+}

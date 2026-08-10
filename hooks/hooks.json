@@ -1,0 +1,49 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/skills/afk/scripts/hook_stop.py",
+            "timeout": 3600
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/skills/afk/scripts/hook_progress.py",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/skills/afk/scripts/hook_permission.py",
+            "timeout": 1200
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "idle_prompt|agent_needs_input",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/skills/afk/scripts/hook_notify.py",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

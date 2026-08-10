@@ -1,0 +1,28 @@
+{
+  "name": "claude-afk-marketplace",
+  "owner": {
+    "name": "claude-afk contributors"
+  },
+  "metadata": {
+    "description": "Single-plugin marketplace for claude-afk, the zero-dependency Telegram bridge for Claude Code."
+  },
+  "plugins": [
+    {
+      "name": "claude-afk",
+      "source": "./",
+      "description": "Continue a live Claude Code session from Telegram when you step away: turn relay, permission approvals, and a live progress ticker. Pure standard-library Python, no daemon, no tmux, no Node.",
+      "version": "0.1.0",
+      "license": "MIT",
+      "homepage": "https://github.com/Pupok462/claude-afk",
+      "keywords": [
+        "claude-code",
+        "telegram",
+        "remote",
+        "mobile",
+        "hooks",
+        "afk",
+        "bridge"
+      ]
+    }
+  ]
+}
